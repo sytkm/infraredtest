@@ -28,7 +28,7 @@ void draw() {
   scale(-1,1);
   for (int i = 0; i < faces.length; i++) {
     
-    image(pic, width-faces[i].x, faces[i].y, -faces[i].width, faces[i].width/2);
+    image(pic, width-faces[0].x, faces[0].y, -faces[0].width, faces[0].width/2);
     //(貼り付ける画像、ｘ座標、ｙ座標、横の長さ、縦の長さ)
     //画像の表示位置は微調整してください
   }

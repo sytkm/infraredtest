@@ -3,6 +3,13 @@ import processing.video.*;
 Capture video;
 PImage img;
 boolean hmd, translucent;
+IntList listlx = new IntList();
+IntList listly = new IntList();
+IntList listrx = new IntList();
+IntList listry = new IntList();
+
+int N = 15;//move average
+
 
 void setup() {
   size(640, 480);
@@ -13,7 +20,7 @@ void setup() {
   hmd = true;//oculus
   noStroke();
   smooth();
-  rectMode(CORNER);
+    rectMode(CORNER);
   println("toggle hmd mode with the key h");
   println("toggle translucent rect mode with the key t");
   println("hmd turn " + (hmd ? "on":"off"));
@@ -55,8 +62,8 @@ void draw() {
     index = 0;
     for (int y = 0; y < video.height; y++) {
       for (int x = 0; x < video.width; x++) {
-        //一番明るいのから10√10以上離れた点の中で一番明るいのを検出
-        if (sq(brightestY-y)+sq(brightestX-x)>1000) {
+        //一番明るいのから100以上離れた点の中で一番明るいのを検出
+        if (sq(brightestY-y)+sq(brightestX-x)>10000) {
           int pixelValue = video.pixels[index];
           float pixelBrightness = brightness(pixelValue);
           if (pixelBrightness > brightestValue2) {
@@ -89,39 +96,64 @@ void draw() {
         brightestX2=brightestX2+10;
         //明るい点も覆い隠すように範囲を広げる
         //quad()は4点指定でその順番に四角形を作る
-        quad(brightestX, brightestY, 
-          brightestX2, brightestY2, 
-          brightestX2+(brightestY-brightestY2)/2, brightestY2+(brightestX2-brightestX)/2, 
-          brightestX+(brightestY-brightestY2)/2, brightestY+(brightestX2-brightestX)/2);
+        int lx = moveAverage(listlx, brightestX);
+        int ly = moveAverage(listly, brightestY);
+        int rx = moveAverage(listrx, brightestX2);
+        int ry = moveAverage(listry, brightestY2);
+        quad(lx, ly, 
+          rx, ry, 
+          rx+(ly-ry)/2, ry+(rx-lx)/2, 
+          lx+(ly-ry)/2, ly+(rx-lx)/2);
       } else {
         //brightestX2が左にあるとき
         brightestX2=brightestX2-10;
-        brightestX=brightestX+10;
-        //明るい点も覆い隠すように範囲を広げる
-        quad(brightestX2, brightestY2, 
-          brightestX, brightestY, 
-          brightestX+(brightestY2-brightestY)/2, brightestY+(brightestX-brightestX2)/2, 
-          brightestX2+(brightestY2-brightestY)/2, brightestY2+(brightestX-brightestX2)/2);
+        brightestX=brightestX+10;//明るい点も覆い隠すように範囲を広げる
+        int lx = moveAverage(listlx, brightestX2);
+        int ly = moveAverage(listly, brightestY2);
+        int rx = moveAverage(listrx, brightestX);
+        int ry = moveAverage(listry, brightestY);
+        quad(lx, ly, 
+          rx, ry, 
+          rx+(ly-ry)/2, ry+(rx-lx)/2, 
+          lx+(ly-ry)/2, ly+(rx-lx)/2);
       }
     }
     if (hmd) {
       if (lef) {
         brightestX=brightestX-10;
         brightestX2=brightestX2+10;
-        translate(brightestX, brightestY);//回転の中心を左に移動
-        scale(sqrt(sq(brightestY-brightestY2)+sq(brightestX-brightestX2))/img.width);//横の長さを計算
-        rotate(atan2((brightestY2-brightestY), (brightestX2-brightestX)));//回転量を計算
+        int lx = moveAverage(listlx, brightestX);
+        int ly = moveAverage(listly, brightestY);
+        int rx = moveAverage(listrx, brightestX2);
+        int ry = moveAverage(listry, brightestY2);
+        translate(lx, ly);//回転の中心を左に移動
+        scale(sqrt(sq(ly-ry)+sq(lx-rx))/img.width);//横の長さを計算
+        rotate(atan2((ry-ly), (rx-lx)));//回転量を計算
       } else {
         brightestX2=brightestX2-10;
         brightestX=brightestX+10;
-        translate(brightestX2, brightestY2);
-        scale(sqrt(sq(brightestY-brightestY2)+sq(brightestX-brightestX2))/img.width);
-        rotate(atan2((brightestY-brightestY2), (brightestX-brightestX2)));
+        int lx = moveAverage(listlx, brightestX2);
+        int ly = moveAverage(listly, brightestY2);
+        int rx = moveAverage(listrx, brightestX);
+        int ry = moveAverage(listry, brightestY);
+        translate(lx, ly);//回転の中心を左に移動
+        scale(sqrt(sq(ly-ry)+sq(lx-rx))/img.width);//横の長さを計算
+        rotate(atan2((ry-ly), (rx-lx)));//回転量を計算
       }
-
+      
       image(img, 0, 0);//imgを表示
     }
   }
+}
+
+int moveAverage(IntList inls, int newin) {
+  inls.append(newin);
+  if (inls.size()>N) inls.remove(0);
+  int sum = 0;
+  for (int n : inls) {
+    sum+=n;
+  }
+  return int(sum/inls.size());//移動平均を返す
 }
 
 void keyPressed() {
